@@ -5,7 +5,7 @@ import * as cheerio from "cheerio";
 
 puppeteer.use(StealthPlugin());
 
-export async function GetPageHTML(url: string): Promise<string> {
+export async function getPageHTML(url: string): Promise<string> {
     const browser = await puppeteer.launch({
         headless: true, // or false for debugging
     });
@@ -14,8 +14,7 @@ export async function GetPageHTML(url: string): Promise<string> {
     await page.setViewport({ width: 1080, height: 1024 });
 
     await page.goto(url, {
-        waitUntil: "networkidle0",
-        timeout: 30000
+        timeout: 10000
     });
 
     const html = await page.content();

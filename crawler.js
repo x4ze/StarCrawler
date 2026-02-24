@@ -3,15 +3,14 @@ const puppeteer = puppeteerExtra.default ?? puppeteerExtra;
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
 import * as cheerio from "cheerio";
 puppeteer.use(StealthPlugin());
-export async function GetPageHTML(url) {
+export async function getPageHTML(url) {
     const browser = await puppeteer.launch({
         headless: true, // or false for debugging
     });
     const page = await browser.newPage();
     await page.setViewport({ width: 1080, height: 1024 });
     await page.goto(url, {
-        waitUntil: "networkidle0",
-        timeout: 30000
+        timeout: 10000
     });
     const html = await page.content();
     await browser.close();
