@@ -1,17 +1,38 @@
-import puppeteer from 'puppeteer';
+import puppeteerExtra from "puppeteer-extra";
+const puppeteer = puppeteerExtra.default ?? puppeteerExtra;
+import StealthPlugin from "puppeteer-extra-plugin-stealth";
+import * as cheerio from "cheerio";
 
+puppeteer.use(StealthPlugin());
 
+export async function GetPageHTML(url: string): Promise<string> {
+    const browser = await puppeteer.launch({
+        headless: true, // or false for debugging
+    });
 
-
-
-export async function GetPageHTML(url: string) {
-    // Launch the browser and open a new blank page.
-    const browser = await puppeteer.launch();   
     const page = await browser.newPage();
-    await page.setViewport({width: 1080, height: 1024});
-    await page.goto(url, { waitUntil: 'networkidle0' });//wait until page loads? 
+    await page.setViewport({ width: 1080, height: 1024 });
+
+    await page.goto(url, {
+        waitUntil: "networkidle0",
+        timeout: 30000
+    });
 
     const html = await page.content();
     await browser.close();
+
     return html;
+}
+
+export function extractLinksFromHTML(html: string): string[] {
+    const $ = cheerio.load(html);
+
+    const links: string[] = [];
+
+    $("a").each((_, el) => {
+        const href = $(el).attr("href");
+        if (href) links.push(href);
+    });
+
+    return links;
 }

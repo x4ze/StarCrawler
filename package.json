@@ -1,8 +1,11 @@
 {
   "type": "module",
   "dependencies": {
+    "cheerio": "^1.2.0",
     "fetch": "^1.1.0",
     "fs": "^0.0.1-security",
-    "puppeteer": "^24.37.5"
+    "puppeteer": "^24.37.5",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
   }
 }
