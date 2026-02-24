@@ -23,15 +23,20 @@ export async function getPageHTML(url: string): Promise<string> {
     return html;
 }
 
-export function extractLinksFromHTML(html: string): string[] {
+export function extractLinksFromHTML(html: string, url: string): string[] {
+    function makeAbsoluteURL(new_URL: string, base_URL: string): string {
+        const absolute_URL = new URL(new_URL, base_URL);
+        return absolute_URL.toString();
+    }   
     const $ = cheerio.load(html);
 
     const links: string[] = [];
 
     $("a").each((_, el) => {
         const href = $(el).attr("href");
-        if (href) links.push(href);
+        if (href) links.push(makeAbsoluteURL(href, url));
     });
 
     return links;
 }
+

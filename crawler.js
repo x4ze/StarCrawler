@@ -16,13 +16,17 @@ export async function getPageHTML(url) {
     await browser.close();
     return html;
 }
-export function extractLinksFromHTML(html) {
+export function extractLinksFromHTML(html, url) {
+    function makeAbsoluteURL(new_URL, base_URL) {
+        const absolute_URL = new URL(new_URL, base_URL);
+        return absolute_URL.toString();
+    }
     const $ = cheerio.load(html);
     const links = [];
     $("a").each((_, el) => {
         const href = $(el).attr("href");
         if (href)
-            links.push(href);
+            links.push(makeAbsoluteURL(href, url));
     });
     return links;
 }
