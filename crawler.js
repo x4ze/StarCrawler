@@ -17,12 +17,24 @@ export async function getPageHTML(url) {
     return html;
 }
 export function extractLinksFromHTML(html) {
-    const $ = cheerio.load(html);
+    const page = cheerio.load(html);
     const links = [];
-    $("a").each((_, el) => {
-        const href = $(el).attr("href");
+    page("a").each((_, el) => {
+        const href = page(el).attr("href");
         if (href)
             links.push(href);
     });
     return links;
+}
+export function extractTextContentFromHTML(html) {
+    const $ = cheerio.load(html);
+    //Remove non-text elements
+    $('script, style, noscript, template, iframe, svg, canvas').remove();
+    const text = $('body')
+        .text()
+        .replace(/\s+/g, ' ')
+        .trim();
+    return text;
+}
+export function Crawl() {
 }
