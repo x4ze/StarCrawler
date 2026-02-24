@@ -2,7 +2,8 @@ import { getPageHTML, extractLinksFromHTML, extractTextContentFromHTML } from ".
 import fs from "fs";
 
 
-const output = await getPageHTML("https://reddit.com");
+const url = "https://reddit.com";
+const output = await getPageHTML(url);
 
 fs.writeFile("output.html", output, (e) => {
     console.log(e);
@@ -11,6 +12,6 @@ fs.writeFile("output.html", output, (e) => {
 const content = extractTextContentFromHTML(output);
 console.log(content);
 
-const links = extractLinksFromHTML(output);
+const links = extractLinksFromHTML(output, url);
 console.log(links);
 

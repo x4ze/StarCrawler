@@ -16,13 +16,22 @@ export async function getPageHTML(url) {
     await browser.close();
     return html;
 }
+<<<<<<< HEAD
 export function extractLinksFromHTML(html) {
     const page = cheerio.load(html);
+=======
+export function extractLinksFromHTML(html, url) {
+    function makeAbsoluteURL(new_URL, base_URL) {
+        const absolute_URL = new URL(new_URL, base_URL);
+        return absolute_URL.toString();
+    }
+    const $ = cheerio.load(html);
+>>>>>>> 557c55758de60c7ce8aed319e8c36ff69bb42916
     const links = [];
     page("a").each((_, el) => {
         const href = page(el).attr("href");
         if (href)
-            links.push(href);
+            links.push(makeAbsoluteURL(href, url));
     });
     return links;
 }
