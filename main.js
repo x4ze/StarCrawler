@@ -1,20 +1,17 @@
 import { getPageHTML, extractLinksFromHTML, extractTextContentFromHTML } from "./crawler.js";
+import { getTextTokens } from "./nlp.js";
+import { countTokens } from "./keyword_identifier.js";
 import fs from "fs";
-<<<<<<< HEAD
-const output = await getPageHTML("https://reddit.com");
+const url = "https://link.springer.com/article/10.1007/BF02245786";
+const output = await getPageHTML(url);
 fs.writeFile("output.html", output, (e) => {
     console.log(e);
 });
 const content = extractTextContentFromHTML(output);
 console.log(content);
-const links = extractLinksFromHTML(output);
-=======
-const url = "https://www.reddit.com/";
-const output = await getPageHTML(url);
-console.log(output);
-fs.writeFile("output.html", output, (e) => {
-    console.log(e);
-});
 const links = extractLinksFromHTML(output, url);
->>>>>>> 557c55758de60c7ce8aed319e8c36ff69bb42916
 console.log(links);
+const tokens = getTextTokens(content);
+console.log(getTextTokens(content));
+const tokens_count = countTokens(tokens);
+console.log("final tokens_count: ", tokens_count);
