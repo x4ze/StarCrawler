@@ -1,17 +1,8 @@
-import { getPageHTML, extractLinksFromHTML, extractTextContentFromHTML } from "./crawler.js"
-import fs from "fs";
+import { Crawl } from "./crawler.js"
 
+console.log("");
+console.log("STAR CRAWLER");
+console.log("");
 
-const url = "https://reddit.com";
-const output = await getPageHTML(url);
-
-fs.writeFile("output.html", output, (e) => {
-    console.log(e);
-});
-
-const content = extractTextContentFromHTML(output);
-console.log(content);
-
-const links = extractLinksFromHTML(output, url);
-console.log(links);
-
+const url = "https://flashback.org/";
+Crawl(url);

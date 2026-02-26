@@ -1,6 +1,7 @@
 {
   "type": "module",
   "dependencies": {
+    "@typinghare/stack-queue": "^1.0.0",
     "cheerio": "^1.2.0",
     "fetch": "^1.1.0",
     "fs": "^0.0.1-security",
