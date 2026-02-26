@@ -1,6 +1,12 @@
 output/
 google_search.html
 
+# Ignore JavaScript files
+*.js
+
+
+package-lock.json
+
 
 
 # Logs
