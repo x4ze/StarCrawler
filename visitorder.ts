@@ -9,8 +9,14 @@ const visited_urls: Map<string, number> = new Map<string, number>;
  * Adds a URL to the crawler's visiting queue.
  * @param url a URL as a string
  */
-export function addURLToQueue(url: string): void {
-    crawling_queue.enqueue(url);
+export function addURLToQueue(input_url: string): void {
+    const url = new URL(input_url);
+
+    //Only add URL to queue if it is http or https, 
+    //This is in order to avoid protocols such as mailto:
+    if (url.protocol === "http:" || url.protocol === "https:") {
+        crawling_queue.enqueue(input_url);
+    }
 }
 
 /**

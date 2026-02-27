@@ -4,6 +4,8 @@ import StealthPlugin from "puppeteer-extra-plugin-stealth";
 import * as cheerio from "cheerio";
 import fs from "fs";
 import { addToVisitedURLs, addURLArrayToQueue, addURLToQueue, crawling_queue, removeQueueHead, hasVisited, hasVisitedArray } from "./visitorder.js";
+import { storeDocument } from "./database.js";
+import { get } from "http";
 
 puppeteer.use(StealthPlugin());
 
@@ -36,10 +38,22 @@ export function extractLinksFromHTML(html: string, url: string): string[] {
 
     $("a").each((_, el) => {
         const href = $(el).attr("href");
-        if (href) links.push(makeAbsoluteURL(href, url));
+        if (href)
+            try { //Try used to avoid invalid urls that would make makeAbsoluteURL throw an error
+                const absolute_URL = makeAbsoluteURL(href, url);
+                links.push(absolute_URL);
+            } catch (e) {
+                //If URL is invalid, skip it
+            }
     });
 
     return links;
+}
+
+export function getDocumentTitleFromHTML(html: string): string {
+    const $ = cheerio.load(html);
+    const title = $("title").text();
+    return title;
 }
 
 export function extractTextContentFromHTML(html: string): string {
@@ -94,7 +108,7 @@ export async function visitURLArray(url_array: Array<string>): Promise<Array<str
 }
 
 export async function Crawl(initial_url: string) {
-    let itteration = 0;
+    let iteration = 0;
 
     addURLToQueue(initial_url);
     let url = removeQueueHead();
@@ -104,24 +118,30 @@ export async function Crawl(initial_url: string) {
             url = removeQueueHead();
             continue;
         } else {
-            console.log("itteration:", itteration)
+            console.log("iteration:", iteration)
             console.log("URL:", url);
 
-            const output: string = await visitURL(url);
+            const pageHTML: string = await visitURL(url);
 
-            const filename: string = "output" + itteration + ".html";
+            const filename: string = "output" + iteration + ".html";
             const path: string = "output/" + filename;
-            fs.writeFile(path, output, (e) => {
+            fs.writeFile(path, pageHTML, (e) => {
                 console.log(e);
             });
             
-            const content: string = extractTextContentFromHTML(output);
-            // console.log("CONTENT:", content);
+            const content: string = extractTextContentFromHTML(pageHTML);
+            //console.log("CONTENT:", content);
+
+            const documentTitle: string = getDocumentTitleFromHTML(pageHTML);
+
+            console.log(`Storing "${documentTitle}" at ${url} in database...`);
+            //Insert the newly crawled document into the database
+            storeDocument(url, documentTitle, content);
             
-            const links: Array<string> = extractLinksFromHTML(output, url);
+            const links: Array<string> = extractLinksFromHTML(pageHTML, url);
             // console.log("LINKS:", links);
 
-            itteration++;
+            iteration++;
             addURLArrayToQueue(links);
             url = removeQueueHead();
         }
