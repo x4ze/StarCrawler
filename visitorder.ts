@@ -11,7 +11,8 @@ const visited_urls: Map<string, number> = new Map<string, number>;
  * @param url a URL as a string
  */
 export function addURLToQueue(input_url: string): void {
-    const url = new URL(simplifyURL(input_url));
+    const simple_url = simplifyURL(input_url);
+    const url = new URL(simple_url);
 
 
     const queue_not_full = crawling_queue.size() < 5000;
@@ -19,7 +20,7 @@ export function addURLToQueue(input_url: string): void {
     //Only add URL to queue if it is http or https, 
     //This is in order to avoid protocols such as mailto:
     if (url.protocol === "http:" || url.protocol === "https:" && queue_not_full && !hasVisited(input_url)) {
-        crawling_queue.enqueue(input_url);
+        crawling_queue.enqueue(simple_url);
     }
 }
 

@@ -5,12 +5,28 @@ import { parse } from "node-html-parser";
 import fs from "fs";
 import { addToVisitedURLs, addURLArrayToQueue, addURLToQueue, crawling_queue, removeQueueHead, hasVisited, hasVisitedArray, writeStartURLs } from "./visitorder.js";
 import { databaseHasStoredUrl, storeDocument } from "./database.js";
+import pLimit from "p-limit";
+import Bottleneck from "bottleneck";
 
 puppeteer.use(StealthPlugin());
 const browser = await puppeteer.launch({
     headless: false,
 });
 
+const GLOBAL_CONCURRENCY = 5;
+const limit = pLimit(GLOBAL_CONCURRENCY);
+
+const domainLimiters = new Map<string, Bottleneck>();
+
+function getLimiterForHost(host: string) {
+    if (!domainLimiters.has(host)) {
+        domainLimiters.set(host, new Bottleneck({
+            maxConcurrent: 2,   // max 2 parallel per domain
+            minTime: 300        //time between requests, to avoid rate limit
+        }));
+    }
+    return domainLimiters.get(host)!;
+}
 
 export async function getPageHTML(url: string): Promise<string> {
     const page = await browser.newPage();
@@ -150,74 +166,52 @@ export async function Crawl(initial_url?: string) {
 
     let url = removeQueueHead();
 
+
     while (url !== null) {
-        console.time(`Crawler Iteration ${iteration}`); // Start timing the whole iteration
+        const host = new URL(url).hostname;
+        const limiter = getLimiterForHost(host);
         const before = Date.now(); 
 
         if (hasVisited(url) || databaseHasStoredUrl(url)) {
             url = removeQueueHead();
-            console.timeEnd(`Crawler Iteration ${iteration}`); // End timing if skipped
             continue;
         } else {
-            console.log("iteration:", iteration);
-            console.log("URL:", url);
 
-            console.time(`visitURL`); // Time the visitURL function
             const pageHTML: string = await visitURL(url);
-            console.timeEnd(`visitURL`);
 
-            console.time(`isEnglishCheck`); // Time the English check
             const lang = getLangHeaderFromHTML(pageHTML);
             const isEnglish = lang === "" || /^en/i.test(lang);
-            console.timeEnd(`isEnglishCheck`);
 
             if (!isEnglish) {
                 url = removeQueueHead();
-                console.timeEnd(`Crawler Iteration ${iteration}`); // End timing if skipped
                 console.log("Skipping due to not english with lang:", lang);
                 continue;
             }
 
-            console.time(`FileWrite`); // Time the file writing process
             const filename: string = "output" + iteration + ".html";
             const path: string = "output/" + filename;
             fs.writeFile(path, pageHTML, (e) => {
                 if (e) console.error(e);
             });
-            console.timeEnd(`FileWrite`); // Note: fs.writeFile is async, so this time represents only the start of the write operation. 
 
-            console.time(`extractTextContent`); // Time text extraction
             const content: string = extractTextContentFromHTML(pageHTML);
-            console.timeEnd(`extractTextContent`);
 
-            console.time(`getDocumentTitle`); // Time title extraction
             const documentTitle: string = getDocumentTitleFromHTML(pageHTML);
-            console.timeEnd(`getDocumentTitle`);
 
-            console.log(`Storing "${documentTitle}" at ${url} in database...`);
             
-            console.time(`storeDocument`); // Time database storage
             storeDocument(url, documentTitle, content);
-            console.timeEnd(`storeDocument`);
 
-            console.time(`extractLinks`); // Time link extraction
             const links: Array<string> = extractLinksFromHTML(pageHTML, url);
-            console.timeEnd(`extractLinks`);
 
             iteration++;
             
-            console.time(`addURLArrayToQueue`); // Time adding links to queue
             addURLArrayToQueue(links);
-            console.timeEnd(`addURLArrayToQueue`);
 
-            console.time(`writeStartURLs`); // Time writing URLs to file
             writeStartURLs();
-            console.timeEnd(`writeStartURLs`);
 
             url = removeQueueHead();
         }
         const after = Date.now();
         console.log(`Visited in ${after - before} ms`);
-        console.timeEnd(`Crawler Iteration ${iteration - 1}`); // End timing for the completed iteration
     }
 }
