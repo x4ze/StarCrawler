@@ -1,8 +1,11 @@
 import { Crawl } from "./crawler.js"
+import { addURLArrayToQueue, getStartURLs } from "./visitorder.js";
 
 console.log("");
 console.log("STAR CRAWLER");
 console.log("");
 
-const url = "https://en.wikipedia.org/wiki/Main_Page";
-Crawl(url);
+const startURLs = getStartURLs();
+
+addURLArrayToQueue(startURLs);
+Crawl();

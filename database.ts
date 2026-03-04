@@ -1,5 +1,6 @@
 import Database from "better-sqlite3";
 import lemmatizeAndCleanText from "./nlp.js";
+import { simplifyURL } from "./visitorder.js";
 
 const db = new Database("database/database.db");
 
@@ -30,7 +31,24 @@ console.log("Database tables created if they didn't already exist.");
 
 export default db;
 
+
+export function databaseHasStoredUrl(url: string) {
+    const simplifiedURL = simplifyURL(url);
+
+    const query_string = `
+        SELECT * FROM raw_documents WHERE url = ?;
+    `
+
+    const query = db.prepare(query_string);
+
+    const matchingRows = query.all(simplifiedURL);
+
+    return matchingRows.length !== 0;
+}
+
 export function storeDocument(url: string, title: string, htmlContent: string) {
+    url = simplifyURL(url);
+
     const raw_documents_insert = db.prepare(`
         INSERT INTO raw_documents (url, html_content) VALUES (?, ?);
     `);

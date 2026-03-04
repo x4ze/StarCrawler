@@ -1,30 +1,53 @@
 import puppeteerExtra from "puppeteer-extra";
 const puppeteer = puppeteerExtra.default ?? puppeteerExtra;
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
-import * as cheerio from "cheerio";
+import { parse } from "node-html-parser";
 import fs from "fs";
-import { addToVisitedURLs, addURLArrayToQueue, addURLToQueue, crawling_queue, removeQueueHead, hasVisited, hasVisitedArray } from "./visitorder.js";
-import { storeDocument } from "./database.js";
-import { get } from "http";
+import { addToVisitedURLs, addURLArrayToQueue, addURLToQueue, crawling_queue, removeQueueHead, hasVisited, hasVisitedArray, writeStartURLs } from "./visitorder.js";
+import { databaseHasStoredUrl, storeDocument } from "./database.js";
 
 puppeteer.use(StealthPlugin());
+const browser = await puppeteer.launch({
+    headless: false,
+});
+
 
 export async function getPageHTML(url: string): Promise<string> {
-    const browser = await puppeteer.launch({
-        headless: true, // or false for debugging
-    });
-
     const page = await browser.newPage();
-    await page.setViewport({ width: 1080, height: 1024 });
 
-    await page.goto(url, {
-        timeout: 10000
-    });
+    try {
 
-    const html = await page.content();
-    await browser.close();
+        //Disable downloads
+        await (await page.createCDPSession()).send("Page.setDownloadBehavior", {
+            behavior: "deny",
+            downloadPath: "/dev/null"
+        });
 
-    return html;
+
+        //DISABLES loading images, fonts and media to save time
+        //(I hope this wont cause bot detection?)
+        await page.setRequestInterception(true);
+
+        page.on("request", (req) => {
+        const type = req.resourceType();
+        if (type === "image" || type === "font" || type === "media") {
+            req.abort();
+        } else {
+            req.continue();
+        }
+        });
+
+        await page.goto(url, {
+            /*
+            //could maybe cause empty docs?!??, but is faster
+            waitUntil: "domcontentloaded", */
+            timeout: 10000
+        });
+
+        return await page.content();
+    } finally {
+        await page.close();
+    }
 }
 
 export function extractLinksFromHTML(html: string, url: string): string[] {
@@ -32,39 +55,52 @@ export function extractLinksFromHTML(html: string, url: string): string[] {
         const absolute_URL = new URL(new_URL, base_URL);
         return absolute_URL.toString();
     }   
-    const $ = cheerio.load(html);
+    const root = parse(html)
 
-    const links: string[] = [];
+    const output_links: string[] = [];
+    const links = root.querySelectorAll("a")
 
-    $("a").each((_, el) => {
-        const href = $(el).attr("href");
-        if (href)
+    links.forEach(element => {
+        const href = element.getAttribute("href");
+        if (href) {
             try { //Try used to avoid invalid urls that would make makeAbsoluteURL throw an error
                 const absolute_URL = makeAbsoluteURL(href, url);
-                links.push(absolute_URL);
+                output_links.push(absolute_URL);
             } catch (e) {
                 //If URL is invalid, skip it
             }
+        }
     });
-
-    return links;
+    return output_links;
 }
 
 export function getDocumentTitleFromHTML(html: string): string {
-    const $ = cheerio.load(html);
-    const title = $("title").text();
-    return title;
+    const root = parse(html);
+    const title = root.querySelector("title")
+    return title?.textContent || "";
 }
 
+export function getLangHeaderFromHTML(html: string): string {
+    const root = parse(html);
+    const htmlElement = root.querySelector("html");
+    const lang = htmlElement?.getAttribute("lang");
+    return lang ?? "";
+
+}
+
+
 export function extractTextContentFromHTML(html: string): string {
-    const $ = cheerio.load(html);
+    const root = parse(html);
 
-    //Remove non-text elements
-    $('script, style, noscript, template, iframe, svg, canvas').remove();
+    // Remove non-text elements
+    root.querySelectorAll('script, style, noscript, template, iframe, svg, canvas')
+        .forEach(el => el.remove());
 
-    const text = $('body')
-        .text()
-        .replace(/\s+/g, ' ') ///Regular expression for any kind of whitespace
+    const body = root.querySelector('body') ?? root;
+
+    const text = body
+        .text
+        .replace(/\s+/g, ' ') // Collapse all whitespace
         .trim();
 
     return text;
@@ -106,44 +142,82 @@ export async function visitURLArray(url_array: Array<string>): Promise<Array<str
     }
     return result;
 }
-
-export async function Crawl(initial_url: string) {
+export async function Crawl(initial_url?: string) {
+    //TODO: check if website is 404 page not found, then dont store it.
     let iteration = 0;
 
-    addURLToQueue(initial_url);
+    if (initial_url !== undefined) addURLToQueue(initial_url);
+
     let url = removeQueueHead();
 
     while (url !== null) {
-        if(hasVisited(url)) {
+        console.time(`Crawler Iteration ${iteration}`); // Start timing the whole iteration
+        const before = Date.now(); 
+
+        if (hasVisited(url) || databaseHasStoredUrl(url)) {
             url = removeQueueHead();
+            console.timeEnd(`Crawler Iteration ${iteration}`); // End timing if skipped
             continue;
         } else {
-            console.log("iteration:", iteration)
+            console.log("iteration:", iteration);
             console.log("URL:", url);
 
+            console.time(`visitURL`); // Time the visitURL function
             const pageHTML: string = await visitURL(url);
+            console.timeEnd(`visitURL`);
 
+            console.time(`isEnglishCheck`); // Time the English check
+            const lang = getLangHeaderFromHTML(pageHTML);
+            const isEnglish = lang === "" || /^en/i.test(lang);
+            console.timeEnd(`isEnglishCheck`);
+
+            if (!isEnglish) {
+                url = removeQueueHead();
+                console.timeEnd(`Crawler Iteration ${iteration}`); // End timing if skipped
+                console.log("Skipping due to not english with lang:", lang);
+                continue;
+            }
+
+            console.time(`FileWrite`); // Time the file writing process
             const filename: string = "output" + iteration + ".html";
             const path: string = "output/" + filename;
             fs.writeFile(path, pageHTML, (e) => {
-                console.log(e);
+                if (e) console.error(e);
             });
-            
-            const content: string = extractTextContentFromHTML(pageHTML);
-            //console.log("CONTENT:", content);
+            console.timeEnd(`FileWrite`); // Note: fs.writeFile is async, so this time represents only the start of the write operation. 
 
+            console.time(`extractTextContent`); // Time text extraction
+            const content: string = extractTextContentFromHTML(pageHTML);
+            console.timeEnd(`extractTextContent`);
+
+            console.time(`getDocumentTitle`); // Time title extraction
             const documentTitle: string = getDocumentTitleFromHTML(pageHTML);
+            console.timeEnd(`getDocumentTitle`);
 
             console.log(`Storing "${documentTitle}" at ${url} in database...`);
-            //Insert the newly crawled document into the database
-            storeDocument(url, documentTitle, content);
             
+            console.time(`storeDocument`); // Time database storage
+            storeDocument(url, documentTitle, content);
+            console.timeEnd(`storeDocument`);
+
+            console.time(`extractLinks`); // Time link extraction
             const links: Array<string> = extractLinksFromHTML(pageHTML, url);
-            // console.log("LINKS:", links);
+            console.timeEnd(`extractLinks`);
 
             iteration++;
+            
+            console.time(`addURLArrayToQueue`); // Time adding links to queue
             addURLArrayToQueue(links);
+            console.timeEnd(`addURLArrayToQueue`);
+
+            console.time(`writeStartURLs`); // Time writing URLs to file
+            writeStartURLs();
+            console.timeEnd(`writeStartURLs`);
+
             url = removeQueueHead();
         }
+        const after = Date.now();
+        console.log(`Visited in ${after - before} ms`);
+        console.timeEnd(`Crawler Iteration ${iteration - 1}`); // End timing for the completed iteration
     }
 }

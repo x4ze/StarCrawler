@@ -9,7 +9,7 @@ export function getTextTokens(text: string): string[] {
     const doc = nlp.readDoc(text);
 
     const tokens = doc.tokens() //Get all text tokens
-
+    console.log("tokens: ", tokens.out());
     //Filter out all stop words, like "the", "is", "at"
     const filteredTokens = tokens.filter(token => !token.out(its.stopWordFlag));
 

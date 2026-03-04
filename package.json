@@ -9,6 +9,7 @@
     "fetch": "^1.1.0",
     "fs": "^0.0.1-security",
     "install": "^0.13.0",
+    "node-html-parser": "^7.1.0",
     "npm": "^11.11.0",
     "prompt-sync": "^4.2.0",
     "puppeteer": "^24.37.5",
