@@ -24,4 +24,10 @@ export function getTextTokens(text: string): string[] {
     return result;
 }
 
+export default function lemmatizeAndCleanText(text: string): string {
+    const tokens = getTextTokens(text);
+    const cleanedText = tokens.join(" ");
+    return cleanedText;
+}
+
 

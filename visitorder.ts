@@ -1,4 +1,5 @@
 import { Queue, Stack } from "@typinghare/stack-queue";
+import fs from "fs";
 
 export const crawling_queue: Queue<string> = new Queue;
 
@@ -9,8 +10,18 @@ const visited_urls: Map<string, number> = new Map<string, number>;
  * Adds a URL to the crawler's visiting queue.
  * @param url a URL as a string
  */
-export function addURLToQueue(url: string): void {
-    crawling_queue.enqueue(url);
+export function addURLToQueue(input_url: string): void {
+    const simple_url = simplifyURL(input_url);
+    const url = new URL(simple_url);
+
+
+    const queue_not_full = crawling_queue.size() < 5000;
+
+    //Only add URL to queue if it is http or https, 
+    //This is in order to avoid protocols such as mailto:
+    if (url.protocol === "http:" || url.protocol === "https:" && queue_not_full && !hasVisited(input_url)) {
+        crawling_queue.enqueue(simple_url);
+    }
 }
 
 /**
@@ -43,8 +54,8 @@ export function removeQueueHead(): string | null {
  * @returns boolean representing if url has already been visited by crawler
  */
 export function hasVisited(url: string): boolean {
-    const lemmatized_url: string = lemmatizeURL(url);
-    return visited_urls.has(lemmatized_url);
+    const simplified_url: string = simplifyURL(url);
+    return visited_urls.has(simplified_url);
 }
 
 /**
@@ -69,7 +80,7 @@ export function hasVisitedArray(url_array: Array<string>): Array<boolean> {
  */
 export function addToVisitedURLs(url: string): void {
     const time = Date.now();
-    url = lemmatizeURL(url);
+    url = simplifyURL(url);
     visited_urls.set(url, time);
 }
 
@@ -79,13 +90,40 @@ export function addToVisitedURLs(url: string): void {
  * @returns the URL "simplified" such that URLs that are guaranteed or likely to
  * lead to same page can be identified with same string
  */
-export function lemmatizeURL(url_string: string): string {
+export function simplifyURL(url_string: string): string {
     const url = new URL(url_string);
-    url_string = url.host + url.pathname + url.search;
+    url_string = url.protocol + "//" + url.host + url.pathname;
     while (url_string.endsWith("/")) {
         url_string = url_string.slice(0, url_string.length - 1);
     }
     return url_string;
+}
+
+export function getStartURLs() {
+    const content = fs.readFileSync("startURLs.txt", "utf-8");
+    const URLs = content.split("\n").filter(url => url.length > 0);
+    console.log("the urls: ", URLs);
+    return URLs;
+}
+
+
+export function writeStartURLs() {
+
+    // Copy without destroying original
+    const cloneArray = [...crawling_queue];
+    const tempQueue = new Queue<string>(cloneArray);
+
+    let writeString = "";
+
+    while (!tempQueue.empty()) {
+        writeString += tempQueue.dequeue() + "\n";
+    }
+
+    fs.writeFile("startURLs.txt", writeString, (e) => {
+        if (e) {
+            console.error("FAILED TO WRITE startURLs.txt", e);
+        }
+    });
 }
 
 // seems to work
