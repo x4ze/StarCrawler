@@ -1,9 +1,13 @@
 import winkNLP, { ItsFunction, ItemToken, SelectedTokens } from 'wink-nlp';
 import model from 'wink-eng-lite-web-model';
+import { SymSpell, Verbosity, loadDefaultDictionaries, SuggestItem } from "symspell-ts"
 
 const nlp = winkNLP(model);
 
 const { its, as } = nlp;
+
+const symSpell = new SymSpell();
+loadDefaultDictionaries(symSpell);
 
 export function getTextTokens(text: string): string[] {
     const doc = nlp.readDoc(text);
@@ -22,6 +26,7 @@ export function getTextTokens(text: string): string[] {
         return operated_tokens;
     }
 
+    
     //Filter out all stop words, like "the", "is", "at"
     const filteredTokens = tokens.filter(token => !token.out(its.stopWordFlag));
 
@@ -33,18 +38,30 @@ export function getTextTokens(text: string): string[] {
     //Lemmatize all words
 
     const lemmatizedTokens = ignoreQuotedTokens(symbolFilteredTokens, its.lemma);
-    console.log("function filter", ignoreQuotedTokens(symbolFilteredTokens, its.lemma));
-
     
-
+    
     //Filter out single character tokens
     const result = lemmatizedTokens.filter(token => token.length > 1);
     return result;
 }
 
+function spellCheck(tokens: string[]): string[] {
+    for (let i = 0; i < tokens.length; i++) {
+        const spellChecked = symSpell.lookup(tokens[i], Verbosity.Top, 2);
+        if (spellChecked[0] !== undefined) {
+        tokens[i] = spellChecked[0].term;
+        }
+    }
+    return tokens;
+}
+
 export default function lemmatizeAndCleanText(text: string): string {
     const tokens = getTextTokens(text);
-    const cleanedText = tokens.join(" ");
+    console.log("tokens: ", tokens)
+    const spellCheckedText = spellCheck(tokens);
+    console.log("spellchecked: ", spellCheckedText)
+    const cleanedText = spellCheckedText.join(" ");
+    console.log("cleanedtext: ", cleanedText)
     return cleanedText;
 }
 
