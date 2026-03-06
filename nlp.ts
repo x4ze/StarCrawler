@@ -26,42 +26,42 @@ export function getTextTokens(text: string): string[] {
         return operated_tokens;
     }
 
-    
-    //Filter out all stop words, like "the", "is", "at"
-    const filteredTokens = tokens.filter(token => !token.out(its.stopWordFlag));
-
-    
-
-    //Filter out symbols https://winkjs.org/wink-nlp/part-of-speech.html
-    const symbolFilteredTokens = filteredTokens.filter(token => token.out(its.pos) !== "SYM");
-    console.log("Tokens with symbols removed: ", symbolFilteredTokens.out(its.value));
-    //Lemmatize all words
-
-    const lemmatizedTokens = ignoreQuotedTokens(symbolFilteredTokens, its.lemma);
-    
-    
-    //Filter out single character tokens
-    const result = lemmatizedTokens.filter(token => token.length > 1);
-    return result;
-}
-
-function spellCheck(tokens: string[]): string[] {
+    //function that spellchecks and switches misspelled words with their correct counterpart.
+    function spellCheck(tokens: string[]): string[] {
+    let insideQuotation = false;
     for (let i = 0; i < tokens.length; i++) {
+        if (tokens[i] === '"') insideQuotation = !insideQuotation;
+        if (insideQuotation) continue;
         const spellChecked = symSpell.lookup(tokens[i], Verbosity.Top, 2);
         if (spellChecked[0] !== undefined) {
         tokens[i] = spellChecked[0].term;
         }
     }
     return tokens;
+    }
+
+    //Filter out all stop words, like "the", "is", "at"
+    const filteredTokens = tokens.filter(token => !token.out(its.stopWordFlag));
+
+    //Filter out symbols https://winkjs.org/wink-nlp/part-of-speech.html
+    const symbolFilteredTokens = filteredTokens.filter(token => token.out(its.pos) !== "SYM");
+    console.log("Tokens with symbols removed: ", symbolFilteredTokens.out(its.value));
+
+    //Lemmatize all words, excluding in quotation
+    const lemmatizedTokens = ignoreQuotedTokens(symbolFilteredTokens, its.lemma);
+    
+    //Spellcheck the words, excluding in quotation
+    const spellCheckededTokens = spellCheck(lemmatizedTokens);
+
+    //Filter out single character tokens
+    const result = lemmatizedTokens.filter(token => token.length > 1);
+    return result;
 }
+
 
 export default function lemmatizeAndCleanText(text: string): string {
     const tokens = getTextTokens(text);
-    console.log("tokens: ", tokens)
-    const spellCheckedText = spellCheck(tokens);
-    console.log("spellchecked: ", spellCheckedText)
-    const cleanedText = spellCheckedText.join(" ");
-    console.log("cleanedtext: ", cleanedText)
+    const cleanedText = tokens.join(" ");
     return cleanedText;
 }
 
