@@ -1,13 +1,11 @@
 import winkNLP, { ItsFunction, ItemToken, SelectedTokens } from 'wink-nlp';
 import model from 'wink-eng-lite-web-model';
-import { SymSpell, Verbosity, loadDefaultDictionaries, SuggestItem } from "symspell-ts"
+
 
 const nlp = winkNLP(model);
 
 const { its, as } = nlp;
 
-const symSpell = new SymSpell();
-loadDefaultDictionaries(symSpell);
 
 export function getTextTokens(text: string): string[] {
     const doc = nlp.readDoc(text);
@@ -26,20 +24,6 @@ export function getTextTokens(text: string): string[] {
         return operated_tokens;
     }
 
-    //function that spellchecks and switches misspelled words with their correct counterpart.
-    function spellCheck(tokens: string[]): string[] {
-    let insideQuotation = false;
-    for (let i = 0; i < tokens.length; i++) {
-        if (tokens[i] === '"') insideQuotation = !insideQuotation;
-        if (insideQuotation) continue;
-        const spellChecked = symSpell.lookup(tokens[i], Verbosity.Top, 2);
-        if (spellChecked[0] !== undefined) {
-        tokens[i] = spellChecked[0].term;
-        }
-    }
-    return tokens;
-    }
-
     //Filter out all stop words, like "the", "is", "at"
     const filteredTokens = tokens.filter(token => !token.out(its.stopWordFlag));
 
@@ -49,9 +33,6 @@ export function getTextTokens(text: string): string[] {
 
     //Lemmatize all words, excluding in quotation
     const lemmatizedTokens = ignoreQuotedTokens(symbolFilteredTokens, its.lemma);
-    
-    //Spellcheck the words, excluding in quotation
-    const spellCheckededTokens = spellCheck(lemmatizedTokens);
 
     //Filter out single character tokens
     const result = lemmatizedTokens.filter(token => token.length > 1);
