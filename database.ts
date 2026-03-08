@@ -22,7 +22,7 @@ db.exec(`
     CREATE VIRTUAL TABLE IF NOT EXISTS search_table USING fts5(
         title,
         cleaned_content,
-        url UNINDEXED,
+        url,
         doc_id UNINDEXED
     );
 `);
@@ -47,20 +47,24 @@ export function databaseHasStoredUrl(url: string) {
 }
 
 export function storeDocument(url: string, title: string, htmlContent: string) {
-    url = simplifyURL(url);
+    try {
+        url = simplifyURL(url);
 
-    const raw_documents_insert = db.prepare(`
-        INSERT INTO raw_documents (url, html_content) VALUES (?, ?);
-    `);
-    const documentInsert = raw_documents_insert.run(url, htmlContent);
+        const raw_documents_insert = db.prepare(`
+            INSERT INTO raw_documents (url, html_content) VALUES (?, ?);
+        `);
+        const documentInsert = raw_documents_insert.run(url, htmlContent);
 
-    const search_table_insert = db.prepare(`
-        INSERT INTO search_table (title, cleaned_content, url, doc_id) VALUES (?, ?, ?, ?);
-    `);
+        const search_table_insert = db.prepare(`
+            INSERT INTO search_table (title, cleaned_content, url, doc_id) VALUES (?, ?, ?, ?);
+        `);
 
-    const cleanedContent = lemmatizeAndCleanText(htmlContent);
+        const cleanedContent = lemmatizeAndCleanText(htmlContent);
 
-    search_table_insert.run(title, cleanedContent, url, documentInsert.lastInsertRowid);
+        search_table_insert.run(title, cleanedContent, url, documentInsert.lastInsertRowid);
+    } catch(e) {
+        console.log("Failed to insert document for url: ", url)
+    }
 }
 
 export function searchDocuments(query: string): unknown[] {
