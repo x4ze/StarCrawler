@@ -45,6 +45,10 @@ while (true) {
     const cleanedQuery = lemmatizeAndCleanText(spellCheckedQuery);
     console.log("Cleaned query:", cleanedQuery);
 
+    if (cleanedQuery.length < 1) {
+        console.log("Cleaned query empty, try again.")
+        continue;
+    }
 
     const results = search(cleanedQuery).slice(0, 4);
     console.log("Search results:", results);

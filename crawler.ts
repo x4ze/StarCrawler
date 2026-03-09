@@ -20,8 +20,8 @@ const domainLimiters = new Map<string, Bottleneck>();
 function getLimiterForHost(host: string) {
     if (!domainLimiters.has(host)) {
         domainLimiters.set(host, new Bottleneck({
-            maxConcurrent: 3,   // max 2 parallel per domain
-            minTime: 1000        //time between requests, to avoid rate limit
+            maxConcurrent: 2,   // max 2 parallel per domain
+            minTime: 1500        //time between requests, to avoid rate limit
         }));
     }
     return domainLimiters.get(host)!;
@@ -256,3 +256,4 @@ export async function Crawl(initial_url?: string) {
 
 }
 
+browser.close();
