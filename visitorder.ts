@@ -16,12 +16,22 @@ export function addURLToQueue(input_url: string): void {
 
 
     const queue_not_full = crawling_queue.size() < 5000;
+    const queue_url_index = crawling_queue.find(que_url => que_url === input_url);
+    const not_in_que = queue_url_index < 0; //so we dont add the same duplicate urls
+
+    const urlIsFile = isFile(simple_url);
 
     //Only add URL to queue if it is http or https, 
     //This is in order to avoid protocols such as mailto:
-    if (url.protocol === "http:" || url.protocol === "https:" && queue_not_full && !hasVisited(input_url)) {
+    if (url.protocol === "http:" || url.protocol === "https:" && queue_not_full && not_in_que && !hasVisited(input_url) && !urlIsFile) {
         crawling_queue.enqueue(simple_url);
     }
+}
+
+export function isFile(url: string): boolean {
+    const fileRegex = /\.(zip|png|jpg|jpeg|gif|pdf|exe|dmg|mp4|mp3|iso|eps)$/i;
+    const urlIsFile = fileRegex.test(url);
+    return urlIsFile;
 }
 
 /**
@@ -92,7 +102,17 @@ export function addToVisitedURLs(url: string): void {
  */
 export function simplifyURL(url_string: string): string {
     const url = new URL(url_string);
-    url_string = url.protocol + "//" + url.host + url.pathname;
+     // remove queries and hashes from the url.
+    url.search = "";
+    url.hash = "";
+
+    // turn into lowercase if not already.
+    url.protocol = url.protocol.toLowerCase();
+    url.hostname = url.hostname.toLowerCase();
+
+    url_string = url.toString();
+
+    //Remove trailing /
     while (url_string.endsWith("/")) {
         url_string = url_string.slice(0, url_string.length - 1);
     }
@@ -110,7 +130,7 @@ export function getStartURLs() {
 export function writeStartURLs() {
 
     // Copy without destroying original
-    const cloneArray = [...crawling_queue];
+    const cloneArray = crawling_queue.elements;
     const tempQueue = new Queue<string>(cloneArray);
 
     let writeString = "";
