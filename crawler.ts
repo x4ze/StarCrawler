@@ -10,10 +10,10 @@ import Bottleneck from "bottleneck";
 
 puppeteer.use(StealthPlugin());
 const browser = await puppeteer.launch({
-    headless: false,
+    headless: true,
 });
 
-const GLOBAL_CONCURRENCY = 6;
+const GLOBAL_CONCURRENCY = 18;
 const limit = pLimit(GLOBAL_CONCURRENCY);
 
 const domainLimiters = new Map<string, Bottleneck>();
@@ -21,7 +21,7 @@ const domainLimiters = new Map<string, Bottleneck>();
 function getLimiterForHost(host: string) {
     if (!domainLimiters.has(host)) {
         domainLimiters.set(host, new Bottleneck({
-            maxConcurrent: 2,   // max 2 parallel per domain
+            maxConcurrent: 3,   // max 2 parallel per domain
             minTime: 1000        //time between requests, to avoid rate limit
         }));
     }
@@ -30,13 +30,9 @@ function getLimiterForHost(host: string) {
 
 export async function getPageHTML(url: string): Promise<string> {
     const page = await browser.newPage();
-    const response = await page.goto(url);
 
-    if (response && (response.status() === 404 || response.status() === 429)) {
-        return "error";
-    }
 
-    try {
+    try {    
 
         //Disable downloads
         const client = await page.createCDPSession();
@@ -59,12 +55,18 @@ export async function getPageHTML(url: string): Promise<string> {
         }
         });
 
-        await page.goto(url, {
+        const response = await page.goto(url, {
             
             //could maybe cause empty docs?!??, but is faster
             waitUntil: "domcontentloaded", 
             timeout: 15000
         });
+
+        if (response && Math.floor((response.status() / 100)) >= 4) {
+            //Invalid status code
+            console.log("Error status: ", response.status(), url)
+            return "error";
+        }
 
         return await page.content();
     } finally {
@@ -219,7 +221,10 @@ export async function Crawl(initial_url?: string) {
 
                 iteration++;
                 
-                addURLArrayToQueue(links);
+                //Limit link count per website to make serach more even and broad
+                const MAX_LINKS_PER_WEBSITE = 100;
+
+                addURLArrayToQueue(links.slice(0, MAX_LINKS_PER_WEBSITE));
 
                 writeStartURLs();
 

@@ -12,6 +12,7 @@ https://serverfault.com/
 https://www.reddit.com/
 https://news.ycombinator.com/
 https://www.quora.com/
+https://www.quora.com/topic/Technology
 https://medium.com/
 https://dev.to/
 https://hashnode.com/

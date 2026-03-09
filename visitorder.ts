@@ -15,7 +15,21 @@ export function addURLToQueue(input_url: string): void {
     const url = new URL(simple_url);
 
 
-    const queue_not_full = crawling_queue.size() < 5000;
+    const queue_full = crawling_queue.size() >= 5000;
+
+    if (queue_full) {
+        //Delete every other element in the queue in order to keep BFS traits.
+
+        const n = crawling_queue.size();
+        for(let i = 0; i < n; i++) {
+            const link = crawling_queue.dequeue();
+            if (i % 2 === 0) {
+                //Reinsert every other element
+                crawling_queue.enqueue(link);
+            }
+        }
+    }
+
     const queue_url_index = crawling_queue.find(que_url => que_url === input_url);
     const not_in_que = queue_url_index < 0; //so we dont add the same duplicate urls
 
@@ -23,7 +37,7 @@ export function addURLToQueue(input_url: string): void {
 
     //Only add URL to queue if it is http or https, 
     //This is in order to avoid protocols such as mailto:
-    if (url.protocol === "http:" || url.protocol === "https:" && queue_not_full && not_in_que && !hasVisited(input_url) && !urlIsFile) {
+    if (url.protocol === "http:" || url.protocol === "https:" && not_in_que && !hasVisited(input_url) && !urlIsFile) {
         crawling_queue.enqueue(simple_url);
     }
 }
@@ -102,8 +116,8 @@ export function addToVisitedURLs(url: string): void {
  */
 export function simplifyURL(url_string: string): string {
     const url = new URL(url_string);
-     // remove queries and hashes from the url.
-    url.search = "";
+    // remove queries and hashes from the url.
+    //url.search = "";
     url.hash = "";
 
     // turn into lowercase if not already.
