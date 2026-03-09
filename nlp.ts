@@ -29,7 +29,6 @@ export function getTextTokens(text: string): string[] {
 
     //Filter out symbols https://winkjs.org/wink-nlp/part-of-speech.html
     const symbolFilteredTokens = filteredTokens.filter(token => token.out(its.pos) !== "SYM");
-    console.log("Tokens with symbols removed: ", symbolFilteredTokens.out(its.value));
 
     //Lemmatize all words, excluding in quotation
     const lemmatizedTokens = ignoreQuotedTokens(symbolFilteredTokens, its.lemma);
