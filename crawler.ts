@@ -30,6 +30,11 @@ function getLimiterForHost(host: string) {
 
 export async function getPageHTML(url: string): Promise<string> {
     const page = await browser.newPage();
+    const response = await page.goto(url);
+
+    if (response && (response.status() === 404 || response.status() === 429)) {
+        return "error";
+    }
 
     try {
 
@@ -139,7 +144,7 @@ export async function visitURL(url: string): Promise<string> {
         return content;
     } catch (error) {
         console.log("Error visiting url: ", url)
-        return "";
+        return "error";
     }
 }
 
@@ -165,14 +170,13 @@ export async function visitURLArray(url_array: Array<string>): Promise<Array<str
 }
 
 export async function Crawl(initial_url?: string) {
-    //TODO: check if website is 404 page not found, then dont store it.
     let iteration = 0;
     const tasks: Promise<void>[] = [];
 
     if (initial_url !== undefined) addURLToQueue(initial_url);
 
     let url = removeQueueHead();
-
+  
     async function crawlSite(site_url: string) {
         try {
             const beforeSchedule = Date.now(); 
@@ -184,7 +188,11 @@ export async function Crawl(initial_url?: string) {
                 const waitTime = before - beforeSchedule;
                 const pageHTML: string = await visitURL(site_url);
 
-                if (pageHTML.length === 0) return;
+                if (pageHTML === "error") {
+                    console.log("Skipping due to page HTML content error")
+                    url = removeQueueHead();
+                    return;
+                }
 
                 const lang = getLangHeaderFromHTML(pageHTML);
                 const isEnglish = lang === "" || /^en/i.test(lang);
