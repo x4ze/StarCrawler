@@ -8,22 +8,21 @@ const db = new Database("database/database.db");
 db.pragma("journal_mode = WAL");
 
 
-db.exec(`
+/*db.exec(`
     CREATE TABLE IF NOT EXISTS raw_documents (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         url TEXT UNIQUE,
         html_content TEXT,
         crawl_date DATETIME DEFAULT CURRENT_TIMESTAMP
     );
-`);
+`);*/
 
 
 db.exec(`
     CREATE VIRTUAL TABLE IF NOT EXISTS search_table USING fts5(
         title,
         cleaned_content,
-        url,
-        doc_id UNINDEXED
+        url
     );
 `);
 
@@ -32,11 +31,11 @@ console.log("Database tables created if they didn't already exist.");
 export default db;
 
 
-export function databaseHasStoredUrl(url: string) {
+export function databaseHasStoredUrl(url: string): boolean {
     const simplifiedURL = simplifyURL(url);
 
     const query_string = `
-        SELECT * FROM raw_documents WHERE url = ?;
+        SELECT * FROM search_table WHERE url = ?;
     `
 
     const query = db.prepare(query_string);
@@ -46,33 +45,48 @@ export function databaseHasStoredUrl(url: string) {
     return matchingRows.length !== 0;
 }
 
-export function storeDocument(url: string, title: string, htmlContent: string) {
+
+/**
+ * Inserts
+ * @param url The url of the 
+ * @param title
+ * @param htmlContent
+ */
+export function storeDocument(url: string, title: string, htmlContent: string): void {
     try {
         url = simplifyURL(url);
 
-        const raw_documents_insert = db.prepare(`
+        /*const raw_documents_insert = db.prepare(`
             INSERT INTO raw_documents (url, html_content) VALUES (?, ?);
         `);
         const documentInsert = raw_documents_insert.run(url, htmlContent);
-
+        */
         const search_table_insert = db.prepare(`
-            INSERT INTO search_table (title, cleaned_content, url, doc_id) VALUES (?, ?, ?, ?);
+            INSERT INTO search_table (title, cleaned_content, url) VALUES (?, ?, ?);
         `);
 
         const cleanedContent = lemmatizeAndCleanText(htmlContent);
 
-        search_table_insert.run(title, cleanedContent, url, documentInsert.lastInsertRowid);
+        search_table_insert.run(title, cleanedContent, url);
     } catch(e) {
         console.log("Failed to insert document for url: ", url)
     }
 }
 
-export function searchDocuments(query: string): unknown[] {
+
+/**
+ * Performs a full text search matching a query in the FTS sqlite table search_table
+ * @param query {string} The SQlite FTS compmatible query as 
+ * a string that the full text search should match
+ * @returns array of the top 100 database entries matching the query
+ * formatted as records representing search results.
+ */
+export function searchDocuments(query: string) {
     const search_query = db.prepare(`
         SELECT  url, 
                 title, 
                 snippet(search_table, 1, '<b>', '</b>', '...', 15) AS snippet,
-                bm25(search_table) AS score
+                bm25(search_table, 2, 1, 0.1) AS score
         FROM search_table
         WHERE search_table MATCH ?
         ORDER BY score
@@ -80,7 +94,9 @@ export function searchDocuments(query: string): unknown[] {
     `); 
     //snippet is a built in sqlite3 func that returns the matched 
     //content wrapped in <b> tags here, at a length of 15 words.
+
+    //2, 1, 0.1 are the different score weights
+    //for the columns title, content and url respecitvely
     
-    const results = search_query.all(query);
-    return results; 
+    return search_query.all(query);
 }

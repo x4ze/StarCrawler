@@ -8,7 +8,11 @@ loadDefaultDictionaries(symSpell);
 
 const prompt: PromptSync.Prompt = PromptSync({ sigint: true });
 
-//function that spellchecks and switches misspelled words with their correct counterpart.
+/**
+ * Spellchecks and switches potentially misspelled words in a string 
+ * with their correct counterpart unless they are wrapped in quotation marks "".
+ * @returns the spellchecked and corrected query as a string, keeping any quotation marks
+ */
 function spellCheck(query: string): string {
     let insideQuotation = false;
     const tokens = query.split(" ");
@@ -29,11 +33,6 @@ function spellCheck(query: string): string {
     return spellCheckedQuery;
 }
 
-export function search(query: string): unknown[] {
-    const results = searchDocuments(query);
-    return results;
-}
-
 while (true) { 
     const query = prompt("Enter search query: ") || "";
 
@@ -50,7 +49,7 @@ while (true) {
         continue;
     }
 
-    const results = search(cleanedQuery).slice(0, 4);
+    const results = searchDocuments(cleanedQuery).slice(0, 4);
     console.log("Search results:", results);
 }
 

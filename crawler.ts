@@ -6,13 +6,14 @@ import { addToVisitedURLs, addURLArrayToQueue, addURLToQueue, removeQueueHead, h
 import { databaseHasStoredUrl, storeDocument } from "./database.js";
 import pLimit from "p-limit";
 import Bottleneck from "bottleneck";
+import { link } from "fs";
 
 puppeteer.use(StealthPlugin());
-const browser = await puppeteer.launch({
+export const browser = await puppeteer.launch({
     headless: true,
 });
 
-const GLOBAL_CONCURRENCY = 18;
+const GLOBAL_CONCURRENCY = 25;
 const limit = pLimit(GLOBAL_CONCURRENCY);
 
 const domainLimiters = new Map<string, Bottleneck>();
@@ -212,9 +213,17 @@ export async function Crawl(initial_url?: string) {
                 iteration++;
                 
                 //Limit link count per website to make serach more even and broad
-                const MAX_LINKS_PER_WEBSITE = 100;
+                const MAX_LINKS_PER_WEBSITE = 20;
 
-                addURLArrayToQueue(links.slice(0, MAX_LINKS_PER_WEBSITE));
+                //Fetch 20 random links to 
+                const linkIndicies = new Set<number>()
+
+                while (linkIndicies.size < MAX_LINKS_PER_WEBSITE  && linkIndicies.size !== links.length) {
+                    linkIndicies.add(Math.floor(Math.random() * links.length));
+                }                
+                const nextLinks: Array<string> = [...linkIndicies].map(i => links[i]);
+
+                addURLArrayToQueue(nextLinks);
 
                 writeStartURLs();
 
@@ -255,5 +264,3 @@ export async function Crawl(initial_url?: string) {
     }
 
 }
-
-browser.close();
