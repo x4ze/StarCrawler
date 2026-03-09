@@ -2,8 +2,7 @@ import puppeteerExtra from "puppeteer-extra";
 const puppeteer = puppeteerExtra.default ?? puppeteerExtra;
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
 import { parse } from "node-html-parser";
-import fs from "fs";
-import { addToVisitedURLs, addURLArrayToQueue, addURLToQueue, crawling_queue, removeQueueHead, hasVisited, hasVisitedArray, writeStartURLs, isFile } from "./visitorder.js";
+import { addToVisitedURLs, addURLArrayToQueue, addURLToQueue, removeQueueHead, hasVisited, hasVisitedArray, writeStartURLs, isFile } from "./visitorder.js";
 import { databaseHasStoredUrl, storeDocument } from "./database.js";
 import pLimit from "p-limit";
 import Bottleneck from "bottleneck";
@@ -203,12 +202,6 @@ export async function Crawl(initial_url?: string) {
                     console.log("Skipping due to not english with lang:", lang);
                     return;
                 }
-
-                const filename: string = "output" + iteration + ".html";
-                const path: string = "output/" + filename;
-                fs.writeFile(path, pageHTML, (e) => {
-                    if (e) console.error(e);
-                });
 
                 const content: string = extractTextContentFromHTML(pageHTML);
 

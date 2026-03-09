@@ -30,7 +30,7 @@ export function addURLToQueue(input_url: string): void {
         }
     }
 
-    const queue_url_index = crawling_queue.find(que_url => que_url === input_url);
+    const queue_url_index = crawling_queue.find(que_url => que_url === simple_url);
     const not_in_que = queue_url_index < 0; //so we dont add the same duplicate urls
 
     const urlIsFile = isFile(simple_url);
@@ -117,7 +117,7 @@ export function addToVisitedURLs(url: string): void {
 export function simplifyURL(url_string: string): string {
     const url = new URL(url_string);
     // remove queries and hashes from the url.
-    //url.search = "";
+    url.search = "";
     url.hash = "";
 
     // turn into lowercase if not already.
