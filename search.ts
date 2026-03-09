@@ -20,7 +20,7 @@ function spellCheck(query: string): string {
             continue;
         }
         const spellChecked = symSpell.lookup(tokens[i], Verbosity.Top, 2);
-        if (spellChecked[0] !== undefined) {
+        if (spellChecked[0] !== undefined && Number.isNaN(Number(tokens[i]))) {
             tokens[i] = spellChecked[0].term;
         };
     };

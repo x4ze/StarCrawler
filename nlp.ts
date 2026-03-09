@@ -34,7 +34,7 @@ export function getTextTokens(text: string): string[] {
     const lemmatizedTokens = ignoreQuotedTokens(symbolFilteredTokens, its.lemma);
 
     //Filter out single character tokens
-    const result = lemmatizedTokens.filter(token => token.length > 1);
+    const result = lemmatizedTokens.filter(token => token !== '"');
     return result;
 }
 

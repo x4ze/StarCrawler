@@ -1,6 +1,5 @@
 output/
 google_search.html
-startURLs.txt
 
 # Ignore JavaScript files
 *.js

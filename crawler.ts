@@ -29,8 +29,6 @@ function getLimiterForHost(host: string) {
 
 export async function getPageHTML(url: string): Promise<string> {
     const page = await browser.newPage();
-
-
     try {    
 
         //Disable downloads
@@ -190,7 +188,6 @@ export async function Crawl(initial_url?: string) {
                 const pageHTML: string = await visitURL(site_url);
 
                 if (pageHTML === "error") {
-                    console.log("Skipping due to page HTML content error")
                     url = removeQueueHead();
                     return;
                 }

@@ -136,7 +136,6 @@ export function simplifyURL(url_string: string): string {
 export function getStartURLs() {
     const content = fs.readFileSync("startURLs.txt", "utf-8");
     const URLs = content.split("\n").filter(url => url.length > 0);
-    console.log("the urls: ", URLs);
     return URLs;
 }
 
