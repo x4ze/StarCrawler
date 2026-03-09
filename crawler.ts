@@ -30,6 +30,11 @@ function getLimiterForHost(host: string) {
 
 export async function getPageHTML(url: string): Promise<string> {
     const page = await browser.newPage();
+    const response = await page.goto(url);
+
+    if (response && response.status() === 404) {
+        return "error";
+    } else {}
 
     try {
 
@@ -134,7 +139,7 @@ export async function visitURL(url: string): Promise<string> {
         const content = await getPageHTML(url);
         return content;
     } catch (error) {
-        return "";
+        return "error";
     }
 }
 
@@ -158,14 +163,13 @@ export async function visitURLArray(url_array: Array<string>): Promise<Array<str
     }
     return result;
 }
+
 export async function Crawl(initial_url?: string) {
-    //TODO: check if website is 404 page not found, then dont store it.
     let iteration = 0;
 
     if (initial_url !== undefined) addURLToQueue(initial_url);
 
     let url = removeQueueHead();
-
 
     while (url !== null) {
         const host = new URL(url).hostname;
@@ -173,44 +177,51 @@ export async function Crawl(initial_url?: string) {
         const before = Date.now(); 
 
         if (hasVisited(url) || databaseHasStoredUrl(url)) {
+            console.log("Skipping due to already visited URL:", url)
             url = removeQueueHead();
             continue;
-        } else {
+        } else {}
 
-            const pageHTML: string = await visitURL(url);
+        const pageHTML: string = await visitURL(url);
 
-            const lang = getLangHeaderFromHTML(pageHTML);
-            const isEnglish = lang === "" || /^en/i.test(lang);
-
-            if (!isEnglish) {
-                url = removeQueueHead();
-                console.log("Skipping due to not english with lang:", lang);
-                continue;
-            }
-
-            const filename: string = "output" + iteration + ".html";
-            const path: string = "output/" + filename;
-            fs.writeFile(path, pageHTML, (e) => {
-                if (e) console.error(e);
-            });
-
-            const content: string = extractTextContentFromHTML(pageHTML);
-
-            const documentTitle: string = getDocumentTitleFromHTML(pageHTML);
-
-            
-            storeDocument(url, documentTitle, content);
-
-            const links: Array<string> = extractLinksFromHTML(pageHTML, url);
-
-            iteration++;
-            
-            addURLArrayToQueue(links);
-
-            writeStartURLs();
-
+        if (pageHTML === "error") {
+            console.log("Skipping due to page HTML content error")
             url = removeQueueHead();
+            continue;
+        } else {}
+
+        const lang = getLangHeaderFromHTML(pageHTML);
+        const isEnglish = lang === "" || /^en/i.test(lang);
+
+        if (!isEnglish) {
+            url = removeQueueHead();
+            console.log("Skipping due to not english with lang:", lang);
+            continue;
         }
+
+        const filename: string = "output" + iteration + ".html";
+        const path: string = "output/" + filename;
+        fs.writeFile(path, pageHTML, (e) => {
+            if (e) console.error(e);
+        });
+
+        const content: string = extractTextContentFromHTML(pageHTML);
+
+        const documentTitle: string = getDocumentTitleFromHTML(pageHTML);
+
+        
+        storeDocument(url, documentTitle, content);
+
+        const links: Array<string> = extractLinksFromHTML(pageHTML, url);
+
+        iteration++;
+        
+        addURLArrayToQueue(links);
+
+        writeStartURLs();
+
+        url = removeQueueHead();
+
         const after = Date.now();
         console.log(`Visited in ${after - before} ms`);
     }
