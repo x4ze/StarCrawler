@@ -8,7 +8,7 @@ const visited_urls: Map<string, number> = new Map<string, number>;
 
 /**
  * Adds a URL to the crawler's visiting queue.
- * @param url a URL as a string
+ * @param url {string} a URL as a string
  */
 export function addURLToQueue(input_url: string): void {
     const simple_url = simplifyURL(input_url);
@@ -19,7 +19,7 @@ export function addURLToQueue(input_url: string): void {
 
     if (queue_full) {
         //Delete every other element in the queue in order to keep BFS traits.
-
+        
         const queue_clone = new Queue<string>(crawling_queue.elements)
         const n = queue_clone.size();
         for(let i = 0; i < n; i++) {
@@ -48,8 +48,8 @@ export function addURLToQueue(input_url: string): void {
 /**
  * Checks if a URL is likely to be the url of a row of example
  * file extensions that aren't interesting to the crawler, such as .png, .jpg and .mp3
- * @param url a URL as a string
- * @returns boolean representing if url includes a generic file type suffix
+ * @param url {string} a web URL
+ * @returns {boolean} A bool representing if url includes a generic file type suffix
  */
 export function isFile(url: string): boolean {
     const fileRegex = /\.(zip|png|jpg|jpeg|gif|pdf|exe|dmg|mp4|mp3|iso|eps)$/i;
@@ -59,7 +59,7 @@ export function isFile(url: string): boolean {
 
 /**
  * Adds an array of URLs to the crawler's visiting queue.
- * @param url_array an Array of URLs as strings
+ * @param url_array {Array<string>} an Array of web URLs 
  */
 export function addURLArrayToQueue(url_array: Array<string>): void {
     for (let index = 0; index < url_array.length; index++) {
@@ -71,7 +71,7 @@ export function addURLArrayToQueue(url_array: Array<string>): void {
 /**
  * Returns the first URL in the crawler's visiting queue if there is any AND
  * removes it from the queue.
- * @returns URL in head of queue as string OR null if queue is empty
+ * @returns {string | null} URL in head of queue as string OR null if queue is empty
  */
 export function removeQueueHead(): string | null {
     if (!crawling_queue.empty()) {
@@ -83,7 +83,7 @@ export function removeQueueHead(): string | null {
 
 /**
  * Checks if a URL has previously been visited.
- * @param url a URL as a string
+ * @param url {string} a web URL
  * @returns boolean representing if url has already been visited by crawler
  */
 export function hasVisited(url: string): boolean {
@@ -93,9 +93,9 @@ export function hasVisited(url: string): boolean {
 
 /**
  * Checks for every URL in an Array if URL has previously been visited.
- * @param url_array an Array of URLs as strings
- * @returns Array of booleans representing if url at corresponding index already
- * has been visited by crawler
+ * @param url_array {Array<string>} an Array of web URLs as strings
+ * @returns {Array<boolean>} An array representing if the URL at the
+ * corresponding index already has been visited by crawler
  */
 export function hasVisitedArray(url_array: Array<string>): Array<boolean> {
     const result: Array<boolean> = [];
@@ -109,7 +109,7 @@ export function hasVisitedArray(url_array: Array<string>): Array<boolean> {
 
 /**
  * Adds a given URL to the crawler's visited URLs history.
- * @param url a URL as a string
+ * @param url {string} a web URL
  */
 export function addToVisitedURLs(url: string): void {
     const time = Date.now();
@@ -119,8 +119,8 @@ export function addToVisitedURLs(url: string): void {
 
 /**
  * 
- * @param url a URL as a string
- * @returns the URL "simplified" such that URLs that are guaranteed or likely to
+ * @param url {string} a web URL
+ * @returns {string} the URL "simplified" such that URLs that are guaranteed or likely to
  * lead to same page can be identified with same string
  */
 export function simplifyURL(url_string: string): string {
@@ -144,7 +144,7 @@ export function simplifyURL(url_string: string): string {
 
 /**
  * Gets the URLs stored in the startURLs.txt file as an array
- * @returns array of all urls in the startURLs.txt file as strings
+ * @returns {Array>string>} array of all urls in the startURLs.txt file as strings
  */
 export function getStartURLs(): string[] {
     const content = fs.readFileSync("startURLs.txt", "utf-8");

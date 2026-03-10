@@ -1,37 +1,9 @@
 import { searchDocuments } from "./database.js";
 import PromptSync from "prompt-sync";
-import lemmatizeAndCleanText from "./nlp.js";
-import { SymSpell, Verbosity, loadDefaultDictionaries} from "symspell-ts"
-
-const symSpell = new SymSpell();
-loadDefaultDictionaries(symSpell);
+import {lemmatizeAndCleanText, spellCheck} from "./nlp.js";
 
 const prompt: PromptSync.Prompt = PromptSync({ sigint: true });
 
-/**
- * Spellchecks and switches potentially misspelled words in a string 
- * with their correct counterpart unless they are wrapped in quotation marks "".
- * @returns the spellchecked and corrected query as a string, keeping any quotation marks
- */
-function spellCheck(query: string): string {
-    let insideQuotation = false;
-    const tokens = query.split(" ");
-
-    for (let i = 0; i < tokens.length; i++) {
-        if (tokens[i][i] === '"') insideQuotation = !insideQuotation;
-        if (insideQuotation) {
-            insideQuotation = !insideQuotation;
-            continue;
-        }
-        const spellChecked = symSpell.lookup(tokens[i], Verbosity.Top, 2);
-        if (spellChecked[0] !== undefined && Number.isNaN(Number(tokens[i]))) {
-            tokens[i] = spellChecked[0].term;
-        };
-    };
-    
-    const spellCheckedQuery = tokens.join(" ");
-    return spellCheckedQuery;
-}
 
 while (true) { 
     const query = prompt("Enter search query: ") || "";

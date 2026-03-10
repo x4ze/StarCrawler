@@ -1,22 +1,11 @@
 import Database from "better-sqlite3";
-import lemmatizeAndCleanText from "./nlp.js";
+import { lemmatizeAndCleanText } from "./nlp.js";
 import { simplifyURL } from "./visitorder.js";
 
 const db = new Database("database/database.db");
 
 // Enable WAL mode that supposedly increases performance
 db.pragma("journal_mode = WAL");
-
-
-/*db.exec(`
-    CREATE TABLE IF NOT EXISTS raw_documents (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        url TEXT UNIQUE,
-        html_content TEXT,
-        crawl_date DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-`);*/
-
 
 db.exec(`
     CREATE VIRTUAL TABLE IF NOT EXISTS search_table USING fts5(
@@ -26,16 +15,20 @@ db.exec(`
     );
 `);
 
-console.log("Database tables created if they didn't already exist.");
+console.log("Database table created if it didn't already exist.");
 
 export default db;
 
-
+/**
+ * Checks whether a url has already been stored in the SQLite database table search_table
+ * @param url {string} The url to check
+ * @returns {boolean} A bool representing whether the given url already is stored in the database
+ */
 export function databaseHasStoredUrl(url: string): boolean {
     const simplifiedURL = simplifyURL(url);
 
     const query_string = `
-        SELECT * FROM search_table WHERE url = ?;
+        SELECT 1 FROM search_table WHERE url = ? LIMIT 1;
     `
 
     const query = db.prepare(query_string);
@@ -47,20 +40,15 @@ export function databaseHasStoredUrl(url: string): boolean {
 
 
 /**
- * Inserts
- * @param url The url of the 
- * @param title
- * @param htmlContent
+ * Inserts a crawled document/website into the SQlite fts5 table search_table
+ * @param url {string} The url of the document to insert.
+ * @param title {string} The html title of the document to insert
+ * @param htmlContent {string} The raw unmodified html content of the document
  */
 export function storeDocument(url: string, title: string, htmlContent: string): void {
     try {
         url = simplifyURL(url);
 
-        /*const raw_documents_insert = db.prepare(`
-            INSERT INTO raw_documents (url, html_content) VALUES (?, ?);
-        `);
-        const documentInsert = raw_documents_insert.run(url, htmlContent);
-        */
         const search_table_insert = db.prepare(`
             INSERT INTO search_table (title, cleaned_content, url) VALUES (?, ?, ?);
         `);
@@ -73,16 +61,23 @@ export function storeDocument(url: string, title: string, htmlContent: string): 
     }
 }
 
+//Structure of result returned from the SQLite table search_table
+type SearchResult = {
+    url: string;
+    title: string;
+    snippet: string;
+    score: number;
+};
 
 /**
  * Performs a full text search matching a query in the FTS sqlite table search_table
  * @param query {string} The SQlite FTS compmatible query as 
  * a string that the full text search should match
- * @returns array of the top 100 database entries matching the query
+ * @returns {Array<SearchResult>} array of the top 100 database entries matching the query
  * formatted as records representing search results.
  */
-export function searchDocuments(query: string) {
-    const search_query = db.prepare(`
+export function searchDocuments(query: string): SearchResult[] {
+    const search_query = db.prepare<string, SearchResult>(`
         SELECT  url, 
                 title, 
                 snippet(search_table, 1, '<b>', '</b>', '...', 15) AS snippet,

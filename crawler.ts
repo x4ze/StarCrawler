@@ -6,19 +6,25 @@ import { addToVisitedURLs, addURLArrayToQueue, addURLToQueue, removeQueueHead, h
 import { databaseHasStoredUrl, storeDocument } from "./database.js";
 import pLimit from "p-limit";
 import Bottleneck from "bottleneck";
-import { link } from "fs";
 
 puppeteer.use(StealthPlugin());
 export const browser = await puppeteer.launch({
     headless: true,
 });
 
-const GLOBAL_CONCURRENCY = 25;
+const GLOBAL_CONCURRENCY = 20;
 const limit = pLimit(GLOBAL_CONCURRENCY);
 
 const domainLimiters = new Map<string, Bottleneck>();
 
-function getLimiterForHost(host: string) {
+
+/**
+ * Returns a unique, new or already existing, Bottleneck instance associated with each 
+ * domain which can be used to limit the maximum concurrent requests to that host.
+ * @param host {string} The domain in question, eg. example.com
+ * @returns {Bottleneck} A unique bottleneck used for that domain.
+ */
+function getLimiterForHost(host: string): Bottleneck {
     if (!domainLimiters.has(host)) {
         domainLimiters.set(host, new Bottleneck({
             maxConcurrent: 2,   // max 2 parallel per domain
@@ -28,11 +34,18 @@ function getLimiterForHost(host: string) {
     return domainLimiters.get(host)!;
 }
 
+
+/**
+ * Visits a web URL using puppeteer with stealth mode and tries to return
+ * the raw HTML content at that URL.
+ * @param url {string} The url to visit and gather html content from
+ * @returns {string} The HTML content of the website or 'error' in case of http errors.
+ */
 export async function getPageHTML(url: string): Promise<string> {
     const page = await browser.newPage();
     try {    
 
-        //Disable downloads
+        //Try to disallow downloads
         const client = await page.createCDPSession();
         await client.send("Browser.setDownloadBehavior", {
             behavior: "deny",
@@ -46,7 +59,7 @@ export async function getPageHTML(url: string): Promise<string> {
 
         page.on("request", (req) => {
         const type = req.resourceType();
-        if (type === "image" || type === "font" || type === "media") {
+        if (type === "image" || type === "font" || type === "media" || "stylesheet") {
             req.abort();
         } else {
             req.continue();
@@ -54,9 +67,7 @@ export async function getPageHTML(url: string): Promise<string> {
         });
 
         const response = await page.goto(url, {
-            
-            //could maybe cause empty docs?!??, but is faster
-            waitUntil: "domcontentloaded", 
+            waitUntil: "domcontentloaded", //could maybe cause empty docs?!??, but is faster
             timeout: 15000
         });
 
@@ -67,11 +78,19 @@ export async function getPageHTML(url: string): Promise<string> {
         }
 
         return await page.content();
+    } catch(e) {
+        return "error";
     } finally {
         await page.close();
     }
 }
 
+
+/**
+ * Tries to extract all links referenced in 'a' tags in the html of a 
+ * @param html {string} The raw HTML to be analyzed 
+ * @returns {string} The html language header or an empty string if not found
+ */
 export function extractLinksFromHTML(html: string, url: string): string[] {
     function makeAbsoluteURL(new_URL: string, base_URL: string): string {
         const absolute_URL = new URL(new_URL, base_URL);
@@ -99,12 +118,23 @@ export function extractLinksFromHTML(html: string, url: string): string[] {
     return output_links;
 }
 
+/**
+ * Tries to get the HTML document title of an HTML string found in the 'title' element.
+ * @param html {string} The raw HTML to be analyzed 
+ * @returns {string} The html document title or an empty string if not found
+ */
 export function getDocumentTitleFromHTML(html: string): string {
     const root = parse(html);
     const title = root.querySelector("title")
     return title?.textContent || "";
 }
 
+/**
+ * Tries to get the HTML language header of an html string found 
+ * in the 'lang' attribute of the 'html' element. Eg. en-US
+ * @param html {string} The raw HTML to be analyzed 
+ * @returns {string} The html language header or an empty string if not found
+ */
 export function getLangHeaderFromHTML(html: string): string {
     const root = parse(html);
     const htmlElement = root.querySelector("html");
@@ -113,7 +143,11 @@ export function getLangHeaderFromHTML(html: string): string {
 
 }
 
-
+/**
+ * Finds all relevant raw text content in the body of an HTML string and returns it 
+ * @param html {string} The raw HTML file content to extract text from
+ * @returns {string} The raw text content in the body of the input HTML string.
+ */
 export function extractTextContentFromHTML(html: string): string {
     const root = parse(html);
 
@@ -133,9 +167,9 @@ export function extractTextContentFromHTML(html: string): string {
 
 /**
  * Tries to visit a URL and adds it to crawler's visited history. (Adds to
- * history regardless of if successful!)
- * @param url a URL as a string
- * @returns page HTML content as string (empty string if failed to get content)
+ * history regardless of whether the visit is successful or not!)
+ * @param url {string} a web URL 
+ * @returns {string} the page HTML content or "error" if the page visit failed 
  */
 export async function visitURL(url: string): Promise<string> {
     addToVisitedURLs(url);
@@ -148,27 +182,21 @@ export async function visitURL(url: string): Promise<string> {
     }
 }
 
-/**
- * Visits each URL in an Array if it hasn't already been visited, and adds each
- * new visited URL to crawler's history automatically.
- * @param url_array an Array of URLs as strings
- * @returns Array of each visited URLs html content as string (note: input and
- * output indexes will not correspond if any already visisted URLs are present).
- */
-export async function visitURLArray(url_array: Array<string>): Promise<Array<string>> {
-    const has_visited: Array<boolean> = hasVisitedArray(url_array);
-    const result: Array<string> = [];
-    for (let index = 0; index < url_array.length; index++) {
-        const url: string = url_array[index];
-        const has_visited_url: boolean = has_visited[index];
-        if (!has_visited_url) {
-            const url_content: string = await visitURL(url);
-            result.push(url_content);
-        } else {}
-    }
-    return result;
-}
 
+/**
+ * The main crawler execution loop that initiates a crawl.
+ * The crawler retrieves the topmost URL in the crawling_queue Queue and concurrently processes 
+ * at most GLOBAL_CONCURRENCY requests at the same time according to the plimit limiter. 
+ * The main steps performed for each crawled url are:
+ *  1. Checking whether the URL has already been visited
+ *  2. Fetching the page HTML
+ *  3. Verifying the page language to avoid processing non-english documents
+ *  4. Extract the text content and title of each page
+ *  5. Store the document in the database
+ *  6. Extract all links from each page
+ *  7. Lastly, enqueue 20 random links in order to let the loop continue
+ * @param initial_url {string | undefined} An optional starting URL for the crawl
+ */
 export async function Crawl(initial_url?: string) {
     let iteration = 0;
     const tasks: Promise<void>[] = [];
