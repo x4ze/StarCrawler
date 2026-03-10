@@ -10,7 +10,6 @@ https://math.stackexchange.com/
 https://serverfault.com/
 https://genius.com/
 https://www.musixmatch.com/
-
 https://www.reddit.com/
 https://news.ycombinator.com/
 https://www.quora.com/
@@ -22,7 +21,6 @@ https://lobste.rs/
 https://slashdot.org/
 https://discuss.python.org/
 https://community.cloudflare.com/
-
 https://www.amazon.com/
 https://www.ebay.com/
 https://www.walmart.com/
@@ -33,7 +31,6 @@ https://www.bestbuy.com/
 https://www.newegg.com/
 https://www.alibaba.com/
 https://www.shopify.com/
-
 https://www.bbc.com/
 https://www.cnn.com/
 https://www.nytimes.com/
@@ -54,7 +51,6 @@ https://www.politico.com/
 https://www.economist.com/
 https://techcrunch.com/
 https://arstechnica.com/
-
 https://github.com/
 https://gitlab.com/
 https://bitbucket.org/
@@ -65,10 +61,8 @@ https://kubernetes.io/
 https://developer.mozilla.org/
 https://opensource.com/
 https://readthedocs.io/
-
 https://www.imdb.com/
 https://letterboxd.com/
-
 https://substack.com/
 https://wordpress.com/
 https://blogspot.com/
@@ -77,7 +71,6 @@ https://tumblr.com/
 https://blog.cloudflare.com/
 https://engineering.fb.com/
 https://netflixtechblog.com/
-
 https://www.linkedin.com/
 https://angel.co/
 https://crunchbase.com/
@@ -86,7 +79,6 @@ https://indeed.com/
 https://zoominfo.com/
 https://www.salesforce.com/
 https://www.hubspot.com/
-
 https://data.gov/
 https://data.europa.eu/
 https://data.worldbank.org/
@@ -95,7 +87,6 @@ https://www.nasa.gov/
 https://www.nih.gov/
 https://www.noaa.gov/
 https://openai.com/
-
 https://www.fandom.com/
 https://www.tripadvisor.com/
 https://www.yelp.com/
