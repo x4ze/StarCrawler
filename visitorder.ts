@@ -1,33 +1,35 @@
 import { Queue, Stack } from "@typinghare/stack-queue";
 import fs from "fs";
 
-export const crawling_queue: Queue<string> = new Queue;
+export let crawling_queue: Queue<string> = new Queue;
 
 // Key: URL | Value: nothing for now
 const visited_urls: Map<string, number> = new Map<string, number>;
 
 /**
  * Adds a URL to the crawler's visiting queue.
- * @param url a URL as a string
+ * @param url {string} a URL as a string
  */
 export function addURLToQueue(input_url: string): void {
     const simple_url = simplifyURL(input_url);
     const url = new URL(simple_url);
 
-
-    const queue_full = crawling_queue.size() >= 5000;
+    const queue_full = crawling_queue.size() >= 10000;
 
     if (queue_full) {
         //Delete every other element in the queue in order to keep BFS traits.
-
-        const n = crawling_queue.size();
+        
+        const queue_clone = new Queue<string>(crawling_queue.elements)
+        const n = queue_clone.size();
         for(let i = 0; i < n; i++) {
-            const link = crawling_queue.dequeue();
+            const link = queue_clone.dequeue();
             if (i % 2 === 0) {
                 //Reinsert every other element
-                crawling_queue.enqueue(link);
+                queue_clone.enqueue(link);
             }
         }
+
+        crawling_queue = queue_clone;
     }
 
     const queue_url_index = crawling_queue.find(que_url => que_url === simple_url);
@@ -37,11 +39,17 @@ export function addURLToQueue(input_url: string): void {
 
     //Only add URL to queue if it is http or https, 
     //This is in order to avoid protocols such as mailto:
-    if (url.protocol === "http:" || url.protocol === "https:" && not_in_que && !hasVisited(input_url) && !urlIsFile) {
+    if ((url.protocol === "http:" || url.protocol === "https:") && not_in_que && !hasVisited(input_url) && !urlIsFile) {
         crawling_queue.enqueue(simple_url);
     }
 }
 
+/**
+ * Checks if a URL is likely to be the url of a row of example
+ * file extensions that aren't interesting to the crawler, such as .png, .jpg and .mp3
+ * @param url {string} a web URL
+ * @returns {boolean} A bool representing if url includes a generic file type suffix
+ */
 export function isFile(url: string): boolean {
     const fileRegex = /\.(zip|png|jpg|jpeg|gif|pdf|exe|dmg|mp4|mp3|iso|eps)$/i;
     const urlIsFile = fileRegex.test(url);
@@ -50,7 +58,7 @@ export function isFile(url: string): boolean {
 
 /**
  * Adds an array of URLs to the crawler's visiting queue.
- * @param url_array an Array of URLs as strings
+ * @param url_array {Array<string>} an Array of web URLs 
  */
 export function addURLArrayToQueue(url_array: Array<string>): void {
     for (let index = 0; index < url_array.length; index++) {
@@ -62,7 +70,7 @@ export function addURLArrayToQueue(url_array: Array<string>): void {
 /**
  * Returns the first URL in the crawler's visiting queue if there is any AND
  * removes it from the queue.
- * @returns URL in head of queue as string OR null if queue is empty
+ * @returns {string | null} URL in head of queue as string OR null if queue is empty
  */
 export function removeQueueHead(): string | null {
     if (!crawling_queue.empty()) {
@@ -74,7 +82,7 @@ export function removeQueueHead(): string | null {
 
 /**
  * Checks if a URL has previously been visited.
- * @param url a URL as a string
+ * @param url {string} a web URL
  * @returns boolean representing if url has already been visited by crawler
  */
 export function hasVisited(url: string): boolean {
@@ -84,9 +92,9 @@ export function hasVisited(url: string): boolean {
 
 /**
  * Checks for every URL in an Array if URL has previously been visited.
- * @param url_array an Array of URLs as strings
- * @returns Array of booleans representing if url at corresponding index already
- * has been visited by crawler
+ * @param url_array {Array<string>} an Array of web URLs as strings
+ * @returns {Array<boolean>} An array representing if the URL at the
+ * corresponding index already has been visited by crawler
  */
 export function hasVisitedArray(url_array: Array<string>): Array<boolean> {
     const result: Array<boolean> = [];
@@ -100,7 +108,7 @@ export function hasVisitedArray(url_array: Array<string>): Array<boolean> {
 
 /**
  * Adds a given URL to the crawler's visited URLs history.
- * @param url a URL as a string
+ * @param url {string} a web URL
  */
 export function addToVisitedURLs(url: string): void {
     const time = Date.now();
@@ -110,8 +118,8 @@ export function addToVisitedURLs(url: string): void {
 
 /**
  * 
- * @param url a URL as a string
- * @returns the URL "simplified" such that URLs that are guaranteed or likely to
+ * @param url {string} a web URL
+ * @returns {string} the URL "simplified" such that URLs that are guaranteed or likely to
  * lead to same page can be identified with same string
  */
 export function simplifyURL(url_string: string): string {
@@ -133,15 +141,21 @@ export function simplifyURL(url_string: string): string {
     return url_string;
 }
 
-export function getStartURLs() {
+/**
+ * Gets the URLs stored in the startURLs.txt file as an array
+ * @returns {Array>string>} array of all urls in the startURLs.txt file as strings
+ */
+export function getStartURLs(): string[] {
     const content = fs.readFileSync("startURLs.txt", "utf-8");
     const URLs = content.split("\n").filter(url => url.length > 0);
-    console.log("the urls: ", URLs);
     return URLs;
 }
 
-
-export function writeStartURLs() {
+/**
+ * Write each url in the current visiting queue (crawling_queue) to a 
+ * file named startURLs.txt separated by new lines
+ */
+export function writeStartURLs(): void {
 
     // Copy without destroying original
     const cloneArray = crawling_queue.elements;
@@ -153,26 +167,5 @@ export function writeStartURLs() {
         writeString += tempQueue.dequeue() + "\n";
     }
 
-    fs.writeFile("startURLs.txt", writeString, (e) => {
-        if (e) {
-            console.error("FAILED TO WRITE startURLs.txt", e);
-        }
-    });
-}
-
-// seems to work
-function testHistory(): void {
-    const new_url1 = "http://www.geekcraft.lol";
-    const new_url2 = "https://www.geekcraft.lol/";
-    const new_url3 = "http:www.geekcraft.lol/#";
-
-    console.log("Visited URLs:", visited_urls);
-    console.log("Is URL", new_url1, "present in visited URLs?", hasVisited(new_url1));
-    console.log("adding new URL to history:", new_url1);
-    addToVisitedURLs(new_url1);
-    console.log("New visited URLs:", visited_urls);
-    console.log("Is URL", new_url1, "present in visited URLs?", hasVisited(new_url1));
-
-    console.log("Is URL", new_url2, "present in visited URLs?", hasVisited(new_url2));
-    console.log("Is URL", new_url3, "present in visited URLs?", hasVisited(new_url3));
+    fs.writeFileSync("startURLs.txt", writeString);
 }
