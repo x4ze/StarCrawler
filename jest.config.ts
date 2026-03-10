@@ -3,6 +3,7 @@ import type { Config } from "jest";
 const config: Config = {
     preset: "ts-jest/presets/default-esm",
     testEnvironment: "node",
+    collectCoverage: true,
 
     transform: {
     "^.+\\.[tj]s$": ["ts-jest", { useESM: true }]

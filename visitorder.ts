@@ -14,7 +14,6 @@ export function addURLToQueue(input_url: string): void {
     const simple_url = simplifyURL(input_url);
     const url = new URL(simple_url);
 
-
     const queue_full = crawling_queue.size() >= 10000;
 
     if (queue_full) {
