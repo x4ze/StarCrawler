@@ -168,9 +168,5 @@ export function writeStartURLs(): void {
         writeString += tempQueue.dequeue() + "\n";
     }
 
-    fs.writeFile("startURLs.txt", writeString, (e) => {
-        if (e) {
-            console.error("FAILED TO WRITE startURLs.txt", e);
-        }
-    });
+    fs.writeFileSync("startURLs.txt", writeString);
 }

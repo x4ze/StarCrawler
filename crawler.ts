@@ -59,7 +59,7 @@ export async function getPageHTML(url: string): Promise<string> {
 
         page.on("request", (req) => {
         const type = req.resourceType();
-        if (type === "image" || type === "font" || type === "media" || "stylesheet") {
+        if (type === "image" || type === "font" || type === "media" || type === "stylesheet") {
             req.abort();
         } else {
             req.continue();
@@ -253,7 +253,8 @@ export async function Crawl(initial_url?: string) {
 
                 addURLArrayToQueue(nextLinks);
 
-                writeStartURLs();
+                //Only write every 10 startURLs
+                if (iteration % 10 === 0) writeStartURLs();
 
                 const after = Date.now();
                 console.log(`[Iter ${iteration}] (${after - before} ms) Visited ${site_url} (Waited ${waitTime} ms)`);
@@ -263,27 +264,29 @@ export async function Crawl(initial_url?: string) {
         }
     }
 
-    let activeTasks: number | null = null;
-    while (url !== null || (activeTasks === null || activeTasks > 0)) {
-        if (url === null || (activeTasks ?? 0) > GLOBAL_CONCURRENCY * 4) {
+    let activeTasks: number = 0;
+    while (url !== null || activeTasks > 0) {
+        if (url === null || activeTasks > GLOBAL_CONCURRENCY * 4) {
             //We disallow activetasks to become greater than 4x global_concurrency
             //Otherwise the whole stack will immediately be queued and nothing 
             //will be written to startURLs.txt
 
-            //Sleep for 50ms to wait for more available tasks
-            await new Promise(resolve => setTimeout(resolve, 50));
-            url = removeQueueHead();
+            //Sleep for 100ms to wait for more available tasks
+            await new Promise(resolve => setTimeout(resolve, 100));
+            if (url === null) url = removeQueueHead();
             continue;
         }
+
+
         if (hasVisited(url) || databaseHasStoredUrl(url) || url === null || isFile(url)) {
             url = removeQueueHead();
             continue;
         } else {
             const currentUrl = url;
-            activeTasks = (activeTasks ?? 0) + 1
+            activeTasks++
             tasks.push(
                 limit(() => crawlSite(currentUrl).then(() => {
-                    if (activeTasks !== null) activeTasks--
+                    activeTasks--
                 }))
             );
             
